@@ -26,7 +26,7 @@ def loocv_mse(x_data, y_data):
     return np.mean(errors)
 
 # Load dataset
-data_file = "/Users/sarah/ML/master_thesis/anonymized_patient_data_219.csv"
+data_file = "anonymized_patient_data_219.csv"
 if os.path.exists(data_file):
     df = pd.read_csv(data_file)
 else:
