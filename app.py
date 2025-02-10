@@ -5,29 +5,35 @@ import matplotlib.pyplot as plt
 from streamlit_gsheets import GSheetsConnection
 from scipy.optimize import curve_fit
 import gspread
-import json
+from oauth2client.service_account import ServiceAccountCredentials
 
-credentials_dict = {
-    "type": st.secrets["gsheets"]["type"],
-    "project_id": st.secrets["gsheets"]["project_id"],
-    "private_key_id": st.secrets["gsheets"]["private_key_id"],
-    "private_key": st.secrets["gsheets"]["private_key"].replace("\\n", "\n"),
-    "client_email": st.secrets["gsheets"]["client_email"],
-    "client_id": st.secrets["gsheets"]["client_id"],
-    "auth_uri": st.secrets["gsheets"]["auth_uri"],
-    "token_uri": st.secrets["gsheets"]["token_uri"],
-    "auth_provider_x509_cert_url": st.secrets["gsheets"]["auth_provider_x509_cert_url"],
-    "client_x509_cert_url": st.secrets["gsheets"]["client_x509_cert_url"],
-}
-
-client = gspread.service_account_from_dict(credentials_dict)
-sheet = client.open_by_url(st.secrets["gsheets"]["spreadsheet"]).sheet1
-
-
-
-# Google Sheets Connection via Streamlit
+# Google Sheets Connection
 conn = st.connection("gsheets", type=GSheetsConnection)
 data = conn.read()
+
+# Extract credentials from Streamlit secrets
+# Extract credentials from Streamlit secrets
+secrets = st.secrets["connections"]["gsheets"]
+
+
+credentials_dict = {
+    "type": secrets["type"],
+    "project_id": secrets["project_id"],
+    "private_key_id": secrets["private_key_id"],
+    "private_key": secrets["private_key"].replace("\\n", "\n"),  # Ensure proper newline formatting
+    "client_email": secrets["client_email"],
+    "client_id": secrets["client_id"],
+    "auth_uri": secrets["auth_uri"],
+    "token_uri": secrets["token_uri"],
+    "auth_provider_x509_cert_url": secrets["auth_provider_x509_cert_url"],
+    "client_x509_cert_url": secrets["client_x509_cert_url"]
+}
+
+# Setup gspread for writing back to the sheet using secrets
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_dict(credentials_dict, scope)
+client = gspread.authorize(creds)
+sheet = client.open("anonymized_219").sheet1
 
 # Sigmoid Function
 def sigmoid(x, a, b, c):
