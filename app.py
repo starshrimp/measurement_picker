@@ -1,95 +1,155 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import scipy.optimize as opt
-from sklearn.model_selection import LeaveOneOut
-from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
 from streamlit_gsheets import GSheetsConnection
+from scipy.optimize import curve_fit
+import gspread
+import json
 
-def sigmoid(x, L, x0, k, b):
-    return L / (1 + np.exp(-k * (x - x0))) + b
+credentials_dict = {
+    "type": st.secrets["gsheets"]["type"],
+    "project_id": st.secrets["gsheets"]["project_id"],
+    "private_key_id": st.secrets["gsheets"]["private_key_id"],
+    "private_key": st.secrets["gsheets"]["private_key"].replace("\\n", "\n"),
+    "client_email": st.secrets["gsheets"]["client_email"],
+    "client_id": st.secrets["gsheets"]["client_id"],
+    "auth_uri": st.secrets["gsheets"]["auth_uri"],
+    "token_uri": st.secrets["gsheets"]["token_uri"],
+    "auth_provider_x509_cert_url": st.secrets["gsheets"]["auth_provider_x509_cert_url"],
+    "client_x509_cert_url": st.secrets["gsheets"]["client_x509_cert_url"],
+}
 
-def fit_sigmoid(x_data, y_data):
-    p0 = [max(y_data), np.median(x_data), 1, min(y_data)]
-    popt, _ = opt.curve_fit(sigmoid, x_data, y_data, p0, method='dogbox')
+client = gspread.service_account_from_dict(credentials_dict)
+sheet = client.open_by_url(st.secrets["gsheets"]["spreadsheet"]).sheet1
+
+
+
+# Google Sheets Connection via Streamlit
+conn = st.connection("gsheets", type=GSheetsConnection)
+data = conn.read()
+
+# Sigmoid Function
+def sigmoid(x, a, b, c):
+    return c / (1 + np.exp(-(x - a) / b))
+
+def train_sigmoid_model(x_data, y_data):
+    popt, _ = curve_fit(sigmoid, x_data, y_data, maxfev=10000)
     return popt
 
-def loocv_mse(x_data, y_data):
-    loo = LeaveOneOut()
-    errors = []
-    for train_index, test_index in loo.split(x_data):
-        x_train, x_test = x_data[train_index], x_data[test_index]
-        y_train, y_test = y_data[train_index], y_data[test_index]
-        params = fit_sigmoid(x_train, y_train)
-        y_pred = sigmoid(x_test, *params)
-        errors.append(mean_squared_error(y_test, y_pred))
-    return np.mean(errors)
+# Streamlit App
+st.title("Patient Measurements Viewer")
 
-# Connect to Google Sheets
-st.title("Patient Oxygen Saturation Visualization")
+# Page 1: Input Patient ID
+st.header("Select Patient")
+patient_id = st.number_input("Enter Patient ID", min_value=1, step=1)
 
-conn = st.connection("gsheets", type=GSheetsConnection)
+if st.button("Load Patient Data"):
+    st.session_state["patient_id"] = patient_id
 
-try:
-    df = conn.read()
-except Exception as e:
-    st.error("Failed to connect to Google Sheets. Please check your API key and connection settings.")
-    st.stop()
+if "patient_id" in st.session_state:
+    patient_id = st.session_state["patient_id"]
+    patient_data = data[data["Patient_ID"] == patient_id].reset_index(drop=True)
 
-# Select patient ID
-patient_ids = df["Anon_Patient_ID"].unique()
-selected_patient = st.selectbox("Select Patient ID", patient_ids)
+    st.header(f"Patient {patient_id} Data")
 
-# Filter and sort data for selected patient
-patient_data = df[df["Anon_Patient_ID"] == selected_patient].copy()
-patient_data = patient_data.sort_values(by=["Insp. O2 (%)"], ascending=True)
+    if not patient_data.empty:
+        st.subheader("Measurements")
 
-# Checkbox for each measurement
-st.subheader(f"Measurements for Patient {selected_patient}")
-checkboxes = []
-for index, row in patient_data.iterrows():
-    checked = st.checkbox(f"Insp. O2: {row['Insp. O2 (%)']}, SpO2: {row['SpO2 (%)']}", value=row['selected'], key=index)
-    checkboxes.append(checked)
-
-# Update selected values
-patient_data["selected"] = [1 if c else 0 for c in checkboxes]
-
-# Additional checkboxes for classification
-st.subheader("Patient Classification")
-ideal_curve = st.checkbox("Ideal Curve", value=bool(patient_data["Ideal_Curve"].iloc[0]))
-outlier = st.checkbox("Outlier", value=bool(patient_data["Outlier"].iloc[0]))
-
-# Train sigmoid model
-if st.button("Train Sigmoid Model"):
-    selected_data = patient_data[patient_data["selected"] == 1]
-    if len(selected_data) > 2:
-        x_data = selected_data["Insp. O2 (%)"].values
-        y_data = selected_data["SpO2 (%)"].values
-        params = fit_sigmoid(x_data, y_data)
-        mse = loocv_mse(x_data, y_data)
-        x_fit = np.linspace(min(x_data), max(x_data), 100)
-        y_fit = sigmoid(x_fit, *params)
-
-        st.subheader("Model Fit")
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots()
-        ax.scatter(x_data, y_data, color='blue', label='Selected Data')
-        ax.scatter(patient_data["Insp. O2 (%)"], patient_data["SpO2 (%)"], color='grey', alpha=0.5, label='Deselected Data')
-        ax.plot(x_fit, y_fit, color='red', label='Sigmoid Fit')
-        ax.set_xlabel("Inspired O2 (%)")
-        ax.set_ylabel("SpO2 (%)")
-        ax.legend()
-        st.pyplot(fig)
+        # Add a measurement number (index-based)
+        patient_data["Measurement Nr"] = patient_data.index + 1  # Start numbering from 1
         
-        st.subheader("Model Performance")
-        st.write(f"Leave-One-Out Cross-Validation MSE: {mse:.5f}")
-    else:
-        st.warning("At least 3 data points must be selected to train the model.")
+        # Create a checkbox column for selection
+        if "selected_measurements" not in st.session_state:
+            st.session_state.selected_measurements = patient_data["selected_measurement"].astype(bool).tolist()
 
-# Save changes back to Google Sheets
-if st.button("Save Changes"):
-    try:
-        conn.write(df)
-        st.success("Changes saved to Google Sheets successfully!")
-    except Exception as e:
-        st.error("Failed to save changes to Google Sheets. Please check your permissions and API settings.")
+        # Display table with checkboxes using st.data_editor()
+        table_data = patient_data[["Measurement Nr", "Insp. O2 (%)", "SpO2 (%)"]].copy()
+        table_data["Include in model"] = st.session_state.selected_measurements
+
+        updated_table = st.data_editor(
+            table_data,
+            column_config={"Include in model": st.column_config.CheckboxColumn()},
+            disabled=["Measurement Nr", "Insp. O2 (%)", "SpO2 (%)"],
+            hide_index=True
+        )
+
+        # Update session state after editing
+        st.session_state.selected_measurements = updated_table["Include in model"].tolist()
+
+        if st.button("Train Model"):
+            # Filter selected and deselected data
+            selected_data = patient_data[updated_table["Include in model"]]
+            deselected_data = patient_data[~updated_table["Include in model"]]
+
+            if not selected_data.empty:
+                # Extract x (Insp. O2), y (SpO2), and Measurement Nr
+                x_selected = selected_data["Insp. O2 (%)"].values
+                y_selected = selected_data["SpO2 (%)"].values
+                measurement_numbers_selected = selected_data["Measurement Nr"].values
+                
+                # Fit sigmoid model
+                try:
+                    popt = train_sigmoid_model(x_selected, y_selected)
+                    
+                    # Generate fitted curve
+                    x_range = np.linspace(x_selected.min(), x_selected.max(), 100)
+                    y_fitted = sigmoid(x_range, *popt)
+                    
+                    # Calculate MSE
+                    y_pred = sigmoid(x_selected, *popt)
+                    mse = np.mean((y_selected - y_pred) ** 2)
+
+                    fig, ax = plt.subplots()
+
+                    # Plot selected data points with measurement numbers (offset label position)
+                    for i, (x, y, label) in enumerate(zip(x_selected, y_selected, measurement_numbers_selected)):
+                        ax.scatter(x, y, color="blue", label="Selected Data" if i == 0 else "")
+                        ax.text(x, y + 0.5, f"{label}", fontsize=10, ha="center", color="blue", fontweight="bold")
+
+                    # Plot deselected data points with measurement numbers (offset label position)
+                    for i, (x, y, label) in enumerate(zip(
+                        deselected_data["Insp. O2 (%)"], deselected_data["SpO2 (%)"], deselected_data["Measurement Nr"]
+                    )):
+                        ax.scatter(x, y, color="grey", label="Deselected Data" if i == 0 else "", alpha=0.6)
+                        ax.text(x, y + 0.5, f"{label}", fontsize=10, ha="center", color="grey", fontweight="bold")
+
+                    ax.plot(x_range, y_fitted, color="red", label="Fitted Sigmoid")
+                    ax.set_title(f"Sigmoid Fit (MSE: {mse:.4f})")
+                    ax.set_xlabel("Insp. O2 (%)")
+                    ax.set_ylabel("SpO2 (%)")
+                    ax.legend()
+                    st.pyplot(fig)
+
+                    # Display MSE
+                    st.write(f"Mean Squared Error (MSE): {mse:.4f}")
+
+                except Exception as e:
+                    st.error(f"Error in fitting sigmoid model: {e}")
+            else:
+                st.warning("No data points selected for fitting the model.")
+
+        st.subheader("Patient Markings")
+
+        ideal_curve = st.checkbox("Ideal Curve", value=bool(patient_data["is_ideal"].iloc[0]))
+        has_outliers = st.checkbox("Has Outliers", value=bool(patient_data["has_outliers"].iloc[0]))
+
+        # Save Patient Data Button Action
+        if st.button("Save Patient"):
+            try:
+                # Update "selected_measurement" for each row
+                for i, selected in enumerate(st.session_state.selected_measurements):
+                    sheet.update_cell(patient_data.index[i] + 2, 5, int(selected))  # Update selected_measurement
+                
+                # Update "is_ideal" and "has_outliers" for all rows of the current patient
+                patient_rows = patient_data.index + 2  # Adjust to match Google Sheets row indexing
+                for row in patient_rows:
+                    sheet.update_cell(row, 7, int(ideal_curve))  # Update is_ideal
+                    sheet.update_cell(row, 6, int(has_outliers))  # Update has_outliers
+                
+                st.success("Patient data saved!")
+            except Exception as e:
+                st.error(f"Error saving patient data: {e}")
+
+    else:
+        st.warning("No data found for the given Patient ID.")
