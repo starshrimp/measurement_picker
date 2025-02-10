@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import scipy.optimize as opt
-import os
 from sklearn.model_selection import LeaveOneOut
 from sklearn.metrics import mean_squared_error
+from streamlit_gsheets import GSheetsConnection
 
 def sigmoid(x, L, x0, k, b):
     return L / (1 + np.exp(-k * (x - x0))) + b
@@ -25,29 +25,30 @@ def loocv_mse(x_data, y_data):
         errors.append(mean_squared_error(y_test, y_pred))
     return np.mean(errors)
 
-# Load dataset
-data_file = "anonymized_patient_data_219.csv"
-if os.path.exists(data_file):
-    df = pd.read_csv(data_file)
-else:
-    st.error("Data file not found!")
-    st.stop()
-
+# Connect to Google Sheets
 st.title("Patient Oxygen Saturation Visualization")
+
+conn = st.connection("gsheets", type=GSheetsConnection)
+
+try:
+    df = conn.read()
+except Exception as e:
+    st.error("Failed to connect to Google Sheets. Please check your API key and connection settings.")
+    st.stop()
 
 # Select patient ID
 patient_ids = df["Anon_Patient_ID"].unique()
 selected_patient = st.selectbox("Select Patient ID", patient_ids)
 
-# Filter data for selected patient
+# Filter and sort data for selected patient
 patient_data = df[df["Anon_Patient_ID"] == selected_patient].copy()
-patient_data["selected"] = 1
+patient_data = patient_data.sort_values(by=["Insp. O2 (%)"], ascending=True)
 
 # Checkbox for each measurement
 st.subheader(f"Measurements for Patient {selected_patient}")
 checkboxes = []
 for index, row in patient_data.iterrows():
-    checked = st.checkbox(f"Insp. O2: {row['Insp. O2 (%)']}, SpO2: {row['SpO2 (%)']}", value=True, key=index)
+    checked = st.checkbox(f"Insp. O2: {row['Insp. O2 (%)']}, SpO2: {row['SpO2 (%)']}", value=row['selected'], key=index)
     checkboxes.append(checked)
 
 # Update selected values
@@ -55,8 +56,8 @@ patient_data["selected"] = [1 if c else 0 for c in checkboxes]
 
 # Additional checkboxes for classification
 st.subheader("Patient Classification")
-ideal_curve = st.checkbox("Ideal Curve", value=False)
-outlier = st.checkbox("Outlier", value=False)
+ideal_curve = st.checkbox("Ideal Curve", value=bool(patient_data["Ideal_Curve"].iloc[0]))
+outlier = st.checkbox("Outlier", value=bool(patient_data["Outlier"].iloc[0]))
 
 # Train sigmoid model
 if st.button("Train Sigmoid Model"):
@@ -85,9 +86,10 @@ if st.button("Train Sigmoid Model"):
     else:
         st.warning("At least 3 data points must be selected to train the model.")
 
-# Save settings and export CSV files
-if st.button("Export Data"):
-    patient_data.to_csv("measurements.csv", index=False)
-    classification_data = pd.DataFrame({"Anon_Patient_ID": [selected_patient], "Ideal_Curve": [int(ideal_curve)], "Outlier": [int(outlier)]})
-    classification_data.to_csv("patient_ideal_outlier.csv", mode='a', header=not os.path.exists("patient_ideal_outlier.csv"), index=False)
-    st.success("Data exported successfully!")
+# Save changes back to Google Sheets
+if st.button("Save Changes"):
+    try:
+        conn.write(df)
+        st.success("Changes saved to Google Sheets successfully!")
+    except Exception as e:
+        st.error("Failed to save changes to Google Sheets. Please check your permissions and API settings.")
