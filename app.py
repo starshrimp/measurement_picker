@@ -66,8 +66,8 @@ if "patient_id" in st.session_state:
         patient_data["Measurement Nr"] = patient_data.index + 1  # Start numbering from 1
         
         # Create a checkbox column for selection
-        if "selected_measurements" not in st.session_state:
-            st.session_state.selected_measurements = patient_data["selected_measurement"].astype(bool).tolist()
+        #if "selected_measurements" not in st.session_state:
+        st.session_state.selected_measurements = patient_data["selected_measurement"].astype(bool).tolist()
 
         # Display table with checkboxes using st.data_editor()
         table_data = patient_data[["Measurement Nr", "Insp. O2 (%)", "SpO2 (%)"]].copy()
