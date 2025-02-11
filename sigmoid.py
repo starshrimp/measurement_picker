@@ -16,7 +16,7 @@ def generate_sigmoid_fit(x_data, y_data, popt):
     if popt is None:
         raise ValueError("Sigmoid model parameters (`popt`) are not provided.")
     
-    x_range = np.linspace(x_data.min(), x_data.max(), 100)
+    x_range = np.linspace(x_data.min() - 1, x_data.max() + 1, 100)
     y_fitted = sigmoid(x_range, *popt)
     y_pred = sigmoid(x_data, *popt)
     mse = np.mean((y_data - y_pred) ** 2)
