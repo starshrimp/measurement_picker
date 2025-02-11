@@ -1,47 +1,17 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 from streamlit_gsheets import GSheetsConnection
-from scipy.optimize import curve_fit
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from sigmoid import sigmoid, train_sigmoid_model, plot_sigmoid_fit  # Import sigmoid logic
+from google_sheets import GoogleSheetsManager  # Import Google Sheets manager
 
-# Google Sheets Connection
+# Streamlit Google Sheets connection
 conn = st.connection("gsheets", type=GSheetsConnection)
 data = conn.read()
 
-# Extract credentials from Streamlit secrets
-# Extract credentials from Streamlit secrets
+# Google Sheets setup
 secrets = st.secrets["connections"]["gsheets"]
-
-
-credentials_dict = {
-    "type": secrets["type"],
-    "project_id": secrets["project_id"],
-    "private_key_id": secrets["private_key_id"],
-    "private_key": secrets["private_key"].replace("\\n", "\n"),  # Ensure proper newline formatting
-    "client_email": secrets["client_email"],
-    "client_id": secrets["client_id"],
-    "auth_uri": secrets["auth_uri"],
-    "token_uri": secrets["token_uri"],
-    "auth_provider_x509_cert_url": secrets["auth_provider_x509_cert_url"],
-    "client_x509_cert_url": secrets["client_x509_cert_url"]
-}
-
-# Setup gspread for writing back to the sheet using secrets
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_dict(credentials_dict, scope)
-client = gspread.authorize(creds)
-sheet = client.open("anonymized_219").sheet1
-
-# Sigmoid Function
-def sigmoid(x, a, b, c):
-    return c / (1 + np.exp(-(x - a) / b))
-
-def train_sigmoid_model(x_data, y_data):
-    popt, _ = curve_fit(sigmoid, x_data, y_data, maxfev=10000)
-    return popt
+sheet_manager = GoogleSheetsManager(secrets)  # Instantiate Google Sheets Manager
+sheet = sheet_manager.get_sheet("anonymized_219")
 
 # Streamlit App
 st.title("Patient Measurements Viewer")
@@ -63,10 +33,9 @@ if "patient_id" in st.session_state:
         st.subheader("Measurements")
 
         # Add a measurement number (index-based)
-        patient_data["Measurement Nr"] = patient_data.index + 1  # Start numbering from 1
-        
+        patient_data["Measurement Nr"] = patient_data.index + 1
+
         # Create a checkbox column for selection
-        #if "selected_measurements" not in st.session_state:
         st.session_state.selected_measurements = patient_data["selected_measurement"].astype(bool).tolist()
 
         # Display table with checkboxes using st.data_editor()
@@ -98,33 +67,8 @@ if "patient_id" in st.session_state:
                 try:
                     popt = train_sigmoid_model(x_selected, y_selected)
                     
-                    # Generate fitted curve
-                    x_range = np.linspace(x_selected.min(), x_selected.max(), 100)
-                    y_fitted = sigmoid(x_range, *popt)
-                    
-                    # Calculate MSE
-                    y_pred = sigmoid(x_selected, *popt)
-                    mse = np.mean((y_selected - y_pred) ** 2)
-
-                    fig, ax = plt.subplots()
-
-                    # Plot selected data points with measurement numbers (offset label position)
-                    for i, (x, y, label) in enumerate(zip(x_selected, y_selected, measurement_numbers_selected)):
-                        ax.scatter(x, y, color="blue", label="Selected Data" if i == 0 else "")
-                        ax.text(x, y + 0.5, f"{label}", fontsize=10, ha="center", color="blue", fontweight="bold")
-
-                    # Plot deselected data points with measurement numbers (offset label position)
-                    for i, (x, y, label) in enumerate(zip(
-                        deselected_data["Insp. O2 (%)"], deselected_data["SpO2 (%)"], deselected_data["Measurement Nr"]
-                    )):
-                        ax.scatter(x, y, color="grey", label="Deselected Data" if i == 0 else "", alpha=0.6)
-                        ax.text(x, y + 0.5, f"{label}", fontsize=10, ha="center", color="grey", fontweight="bold")
-
-                    ax.plot(x_range, y_fitted, color="red", label="Fitted Sigmoid")
-                    ax.set_title(f"Sigmoid Fit (MSE: {mse:.4f})")
-                    ax.set_xlabel("Insp. O2 (%)")
-                    ax.set_ylabel("SpO2 (%)")
-                    ax.legend()
+                    # Plot the results using the imported function
+                    fig, mse = plot_sigmoid_fit(x_selected, y_selected, popt, deselected_data, measurement_numbers_selected)
                     st.pyplot(fig)
 
                     # Display MSE
@@ -144,15 +88,21 @@ if "patient_id" in st.session_state:
         if st.button("Save Patient"):
             try:
                 # Update "selected_measurement" for each row
-                for i, selected in enumerate(st.session_state.selected_measurements):
-                    sheet.update_cell(patient_data.index[i] + 2, 5, int(selected))  # Update selected_measurement
+                updates = [
+                    (patient_data.index[i] + 2, 5, int(selected))  # Update selected_measurement
+                    for i, selected in enumerate(st.session_state.selected_measurements)
+                ]
+                sheet_manager.update_multiple_cells(sheet, updates)
                 
                 # Update "is_ideal" and "is_processed" for all rows of the current patient
-                patient_rows = patient_data.index + 2  # Adjust to match Google Sheets row indexing
+                patient_rows = patient_data.index + 2
+                updates = []
                 for row in patient_rows:
-                    sheet.update_cell(row, 7, int(ideal_curve))  # Update is_ideal
-                    sheet.update_cell(row, 8, int(is_processed))  # Update is_processed
+                    updates.append((row, 7, int(ideal_curve)))  # Update is_ideal
+                    updates.append((row, 8, int(is_processed)))  # Update is_processed
                 
+                sheet_manager.update_multiple_cells(sheet, updates)
+
                 st.success("Patient data saved!")
             except Exception as e:
                 st.error(f"Error saving patient data: {e}")
