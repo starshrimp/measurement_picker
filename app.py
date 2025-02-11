@@ -138,7 +138,7 @@ if "patient_id" in st.session_state:
         st.subheader("Patient Markings")
 
         ideal_curve = st.checkbox("Ideal Curve", value=bool(patient_data["is_ideal"].iloc[0]))
-        has_outliers = st.checkbox("Has Outliers", value=bool(patient_data["has_outliers"].iloc[0]))
+        is_processed = st.checkbox("Is processed?", value=bool(patient_data["is_processed"].iloc[0]))
 
         # Save Patient Data Button Action
         if st.button("Save Patient"):
@@ -147,11 +147,11 @@ if "patient_id" in st.session_state:
                 for i, selected in enumerate(st.session_state.selected_measurements):
                     sheet.update_cell(patient_data.index[i] + 2, 5, int(selected))  # Update selected_measurement
                 
-                # Update "is_ideal" and "has_outliers" for all rows of the current patient
+                # Update "is_ideal" and "is_processed" for all rows of the current patient
                 patient_rows = patient_data.index + 2  # Adjust to match Google Sheets row indexing
                 for row in patient_rows:
                     sheet.update_cell(row, 7, int(ideal_curve))  # Update is_ideal
-                    sheet.update_cell(row, 6, int(has_outliers))  # Update has_outliers
+                    sheet.update_cell(row, 8, int(is_processed))  # Update is_processed
                 
                 st.success("Patient data saved!")
             except Exception as e:
