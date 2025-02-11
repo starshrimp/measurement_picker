@@ -114,5 +114,72 @@ def start_page():
     else:
         st.info("No ideal patients available.")
 
+    # Display all "is_problematic" patients with sigmoid plots
+
+    # Identify patients where the first measurement has is_problematic = 1
+    problematic_patient_ids = first_measurements[first_measurements["is_problematic"] == 1]["Patient_ID"].unique()
+
+    # Filter all measurements for those patients
+    problematic_patients = data[data["Patient_ID"].isin(problematic_patient_ids)]
+
+    # Display all "is_problematic" patients with sigmoid plots
+    st.subheader("Problematic Patients")
+
+    if not problematic_patients.empty:
+        # Counter for organizing plots in rows
+        col_counter = 0
+        columns = st.columns(3)  # Create three columns for each row
+        for patient_id, patient_data in problematic_patients.groupby("Patient_ID"):
+            # Collect all x (Insp. O2) and y (SpO2) data points for the patient
+            x_selected = patient_data[patient_data["selected_measurement"] == 1]["Insp. O2 (%)"].values
+            y_selected = patient_data[patient_data["selected_measurement"] == 1]["SpO2 (%)"].values
+
+            # Collect deselected data points for visualization
+            deselected_data = patient_data[patient_data["selected_measurement"] == 0]
+
+            # Use the index of the selected measurements as labels
+            measurement_numbers_selected = patient_data[patient_data["selected_measurement"] == 1].index.values
+
+            # Train the sigmoid model
+            if len(x_selected) > 0 and len(y_selected) > 0:
+                try:
+                    popt = train_sigmoid_model(x_selected, y_selected)
+
+                    # Adjust deselected data to use the index as labels
+                    deselected_data_index = deselected_data.index.values
+
+                    # Plot sigmoid fit and data points
+                    fig, mse = plot_sigmoid_fit(
+                        x_selected,
+                        y_selected,
+                        popt,
+                        deselected_data={
+                            "Insp. O2 (%)": deselected_data["Insp. O2 (%)"].values,
+                            "SpO2 (%)": deselected_data["SpO2 (%)"].values,
+                            "Measurement Nr": deselected_data_index,  # Using index as labels for deselected data
+                        },
+                        measurement_numbers_selected=measurement_numbers_selected,
+                    )
+
+                    # Display plot in one of the three columns
+                    with columns[col_counter]:
+                        st.write(f"Patient ID: {patient_id} - MSE: {mse:.4f}")
+                        st.pyplot(fig)
+
+                    # Update column counter
+                    col_counter += 1
+
+                    # Reset columns if all three columns in a row are filled
+                    if col_counter == 3:
+                        col_counter = 0
+                        columns = st.columns(3)  # Start a new row of three columns
+
+                except Exception as e:
+                    st.error(f"Error fitting sigmoid for Patient ID {patient_id}: {e}")
+            else:
+                st.warning(f"Patient ID {patient_id} has no selected measurements to process.")
+
+    else:
+        st.info("No problematic patients available.")
 
 
