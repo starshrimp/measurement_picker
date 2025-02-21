@@ -3,13 +3,37 @@ from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 
 # Define the sigmoid function
-def sigmoid(x, a, b, c):
-    return c / (1 + np.exp(-(x - a) / b))
+def sigmoid(x, L, x0, k, b):
+    y = L / (1 + np.exp(-k * (x - x0))) + b
+    return y
 
 # Function to train the sigmoid model
 def train_sigmoid_model(x_data, y_data):
-    popt, _ = curve_fit(sigmoid, x_data, y_data, maxfev=10000)
+    # Initial guess:
+    #   L ~ (max(y) - min(y)), 
+    #   x0 ~ mean(x),
+    #   k ~ 0.1,
+    #   b ~ min(y)
+    p0 = [max(y_data) - min(y_data), np.mean(x_data), 0.1, min(y_data)]
+    
+    # Bounds: L in [0, 100], b in [0, 100], 
+    # x0 unbounded, k >= 0
+    # (Adjust as suits your data range.)
+    bounds = (
+        [0.0,       -np.inf,  0.0, 0.0],   # lower
+        [100.0,      np.inf,  np.inf, 100.0]  # upper
+    )
+    
+    popt, pcov = curve_fit(
+        sigmoid, 
+        x_data, 
+        y_data, 
+        p0=p0, 
+        method='trf', 
+        bounds=bounds
+    )
     return popt
+
 
 # Function to generate sigmoid curve and calculate MSE
 def generate_sigmoid_fit(x_data, y_data, popt):
@@ -21,7 +45,6 @@ def generate_sigmoid_fit(x_data, y_data, popt):
     y_pred = sigmoid(x_data, *popt)
     mse = np.mean((y_data - y_pred) ** 2)
     return x_range, y_fitted, mse
-
 
 # Function to create a plot with sigmoid fit and data points
 def plot_sigmoid_fit(x_selected, y_selected, popt, deselected_data=None, measurement_numbers_selected=None):

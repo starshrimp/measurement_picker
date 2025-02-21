@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 from sigmoid import plot_sigmoid_fit, train_sigmoid_model
+from hill_equation import plot_hill_fit, train_hill_model
 from google_sheets import GoogleSheetsManager
 
 
@@ -92,7 +93,7 @@ def patient_page():
             st.session_state.selected_measurements = updated_table["Include in model"].tolist()
 
           
-            if st.button("Train Model"):
+            if st.button("Sigmoid Model"):
                 # Filter selected and deselected data
                 selected_data = patient_data[updated_table["Include in model"]]
                 deselected_data = patient_data[~updated_table["Include in model"]]
@@ -113,6 +114,26 @@ def patient_page():
                     st.warning("No data points selected for fitting the model.")
 
           
+            if st.button("Hill Model"):
+                # Filter selected and deselected data
+                selected_data = patient_data[updated_table["Include in model"]]
+                deselected_data = patient_data[~updated_table["Include in model"]]
+
+                if not selected_data.empty:
+                    x_selected = selected_data["Insp. O2 (%)"].values
+                    y_selected = selected_data["SpO2 (%)"].values
+                    measurement_numbers_selected = selected_data["Measurement Nr"].values
+
+                    try:
+                        popt = train_hill_model(x_selected, y_selected)
+                        fig, mse = plot_hill_fit(x_selected, y_selected, popt, deselected_data, measurement_numbers_selected)
+                        st.pyplot(fig)
+                        st.write(f"Mean Squared Error (MSE): {mse:.4f}")
+                    except Exception as e:
+                        st.error(f"Error in fitting sigmoid model: {e}")
+                else:
+                    st.warning("No data points selected for fitting the model.")
+
             st.subheader("Patient Markings")
 
             is_ideal = bool(patient_data.loc[0, "is_ideal"])
