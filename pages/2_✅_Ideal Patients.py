@@ -1,7 +1,7 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-from sigmoid import plot_sigmoid_fit, train_sigmoid_model
+from hill_equation import plot_hill_fit, train_hill_model
 from data_connector import load_all
 
 
@@ -14,7 +14,7 @@ data, problematic_patients, ideal_patients, patient_ids = load_all()
 
 
 
-# Display all "is_ideal" patients with sigmoid plots
+# Display all "is_ideal" patients with hill plots
 st.subheader("Ideal Patients")
 
 if not ideal_patients.empty:
@@ -32,16 +32,16 @@ if not ideal_patients.empty:
         # Use the index of the selected measurements as labels
         measurement_numbers_selected = patient_data[patient_data["selected_measurement"] == 1].index.values
 
-        # Train the sigmoid model
+        # Train the hill model
         if len(x_selected) > 0 and len(y_selected) > 0:
             try:
-                popt = train_sigmoid_model(x_selected, y_selected)
+                popt = train_hill_model(x_selected, y_selected)
 
                 # Adjust deselected data to use the index as labels
                 deselected_data_index = deselected_data.index.values
 
-                # Plot sigmoid fit and data points
-                fig, mse = plot_sigmoid_fit(
+                # Plot hill fit and data points
+                fig, mse = plot_hill_fit(
                     x_selected,
                     y_selected,
                     popt,
@@ -67,7 +67,7 @@ if not ideal_patients.empty:
                     columns = st.columns(3)  # Start a new row of three columns
 
             except Exception as e:
-                st.error(f"Error fitting sigmoid for Patient ID {patient_id}: {e}")
+                st.error(f"Error fitting Hill for Patient ID {patient_id}: {e}")
         else:
             st.warning(f"Patient ID {patient_id} has no selected measurements to process.")
 
