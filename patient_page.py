@@ -3,17 +3,12 @@ import numpy as np
 import pandas as pd
 from sigmoid import plot_sigmoid_fit, train_sigmoid_model
 from hill_equation import plot_hill_fit, train_hill_model
+from data_connector import load_all
 from google_sheets import GoogleSheetsManager
 
 
 def patient_page():
-    # Setup Google Sheets manager
-    secrets = st.secrets["connections"]["gsheets"]
-    sheet_manager = GoogleSheetsManager(secrets)
-    sheet = sheet_manager.get_sheet("anonymized_219")
-
-    # Load data from Google Sheets
-    data = pd.DataFrame(sheet.get_all_records())
+    data, problematic_patients , ideal_patients, patient_ids = load_all()
 
     st.title("Patient Overview")
 
@@ -35,7 +30,7 @@ def patient_page():
         # Check if there are any unprocessed patients
         if not unprocessed_patients.empty:
             # Set session state to the Patient_ID of the first unprocessed patient
-            st.session_state.patient_id = unprocessed_patients["Patient_ID"].iloc[0]
+            st.session_state.patient_id = int(unprocessed_patients["Patient_ID"].iloc[0])
             st.session_state.page = "patient"
             st.rerun()
         else:
@@ -44,8 +39,20 @@ def patient_page():
 
     if st.button("Go to Next Patient"):
         if "patient_id" in st.session_state:
-            current_patient_id = st.session_state["patient_id"]
+            current_patient_id = int(st.session_state["patient_id"])
+            # Convert to numeric, forcing non-numeric entries to NaN
+            data["Patient_ID"] = pd.to_numeric(data["Patient_ID"], errors="coerce")
+
+            # Drop rows where Patient_ID is now NaN (i.e., originally non-numeric)
+            data = data.dropna(subset=["Patient_ID"])
+
+            # Now safely convert to int
+            data["Patient_ID"] = data["Patient_ID"].astype(int)
+
+            current_patient_id = int(current_patient_id)  # if needed
+
             next_patients = data[data["Patient_ID"] > current_patient_id].sort_values("Patient_ID")
+
             if not next_patients.empty:
                 st.session_state.patient_id = next_patients["Patient_ID"].iloc[0]
                 st.session_state.page = "patient"
@@ -180,6 +187,9 @@ def patient_page():
                     updates.append((patient_rows[0], 8, int(st.session_state.is_processed_checkbox)))  # First row for is_processed
                     updates.append((patient_rows[0], 9, int(st.session_state.is_problematic_checkbox)))  # First row for is_problematic
 
+                    secrets = st.secrets["connections"]["gsheets"]
+                    sheet_manager = GoogleSheetsManager(secrets)
+                    sheet = sheet_manager.get_sheet("anonymized_219")
 
                     # Batch update the Google Sheet
                     sheet_manager.update_multiple_cells(sheet, updates)
