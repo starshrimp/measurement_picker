@@ -4,6 +4,10 @@ import pandas as pd
 from sigmoid import plot_sigmoid_fit, train_sigmoid_model
 from data_connector import load_all
 
+st.set_page_config(
+    page_title="Problematic Patients",
+    page_icon="❌",
+)
 
 # Display all "is_problematic" patients with sigmoid plots
 st.subheader("Problematic Patients")
