@@ -47,5 +47,3 @@ def start_page():
         else:
             st.warning("No unprocessed patients found.")
 
-
-

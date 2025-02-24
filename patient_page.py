@@ -202,3 +202,4 @@ def patient_page():
 
         else:
             st.warning("No data found for the given Patient ID.")
+
