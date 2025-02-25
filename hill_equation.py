@@ -1,4 +1,5 @@
 import numpy as np
+import streamlit as st
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 
@@ -64,3 +65,23 @@ def plot_hill_fit(x_selected, y_selected, popt, deselected_data=None, measuremen
     ax.legend()
     
     return fig, mse
+
+def button_hill_model(patient_data, updated_table):
+    # Filter selected and deselected data
+    selected_data = patient_data[updated_table["Include in model"]]
+    deselected_data = patient_data[~updated_table["Include in model"]]
+
+    if not selected_data.empty:
+        x_selected = selected_data["Insp. O2 (%)"].values
+        y_selected = selected_data["SpO2 (%)"].values
+        measurement_numbers_selected = selected_data["Measurement Nr"].values
+
+        try:
+            popt = train_hill_model(x_selected, y_selected)
+            fig, mse = plot_hill_fit(x_selected, y_selected, popt, deselected_data, measurement_numbers_selected)
+            st.pyplot(fig)
+            st.write(f"Mean Squared Error (MSE): {mse:.4f}")
+        except Exception as e:
+            st.error(f"Error in fitting sigmoid model: {e}")
+    else:
+        st.warning("No data points selected for fitting the model.")

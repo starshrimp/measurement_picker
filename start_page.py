@@ -5,17 +5,17 @@ from sigmoid import plot_sigmoid_fit, train_sigmoid_model
 from data_connector import load_all, load_data, load_problematic_patients
 from google_sheets import GoogleSheetsManager
 
-st.set_page_config(
-    page_title="ODC Curve Fitting",
-    page_icon="👋",
-)
+# st.set_page_config(
+#     page_title="ODC Curve Fitting",
+#     page_icon="👋",
+# )
 
 st.title("Main Page")
 st.sidebar.success("Select a page above.")
 
 def start_page():
 
-    data, problematic_patients , ideal_patients, patient_ids = load_all()
+    data, problematic_patients , ideal_patients, unprocessed_patients, patient_ids = load_all()
     
     st.title("Patient Overview")
 

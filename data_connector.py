@@ -25,7 +25,12 @@ def load_all():
 
     ideal_patients = st.session_state.ideal_patients
 
-    return data, problematic_patients, ideal_patients, patient_ids
+    if "unprocessed_patients" not in st.session_state:
+        st.session_state.unprocessed_patients = load_unprocessed_patients(data)
+
+    unprocessed_patients = st.session_state.unprocessed_patients
+
+    return data, problematic_patients, ideal_patients, unprocessed_patients, patient_ids
 
 def load_data():
     secrets = st.secrets["connections"]["gsheets"]
@@ -52,3 +57,49 @@ def load_ideal_patients(data):
     # Filter all measurements for those patients
     ideal_patients = data[data["Patient_ID"].isin(ideal_patient_ids)]
     return ideal_patients
+
+def load_unprocessed_patients(data):
+    # Identify first measurements for each patient
+    first_measurements = (
+        data.sort_values(["Patient_ID", "Insp. O2 (%)"])
+            .groupby("Patient_ID")
+            .head(1)
+    )
+    
+    # Get IDs of patients whose first measurement is unprocessed
+    unprocessed_patient_ids = first_measurements[
+        first_measurements["is_processed"] != 1
+    ]["Patient_ID"].unique()
+
+    # Filter and return all rows for these unprocessed patients
+    unprocessed_patients = data[data["Patient_ID"].isin(unprocessed_patient_ids)]
+    return unprocessed_patients
+
+
+def save_data(data, patient_id):
+    try:
+        # Filter data for the current patient
+        patient_rows = data[data["Patient_ID"] == patient_id].index + 2  # Rows in the Google Sheet (1-based index, with header)
+
+        # Prepare updates for selected_measurement, is_ideal, and is_processed
+        updates = []
+        for i, row in enumerate(patient_rows):
+            # Update "selected_measurement" for each measurement of the patient
+            updates.append((row, 5, int(st.session_state.selected_measurements[i])))
+
+        # Update "is_ideal" and "is_processed" (only for the first row of this patient in Google Sheets)
+        updates.append((patient_rows[0], 7, int(st.session_state.ideal_curve_checkbox)))  # First row for is_ideal
+        updates.append((patient_rows[0], 8, int(st.session_state.is_processed_checkbox)))  # First row for is_processed
+        updates.append((patient_rows[0], 9, int(st.session_state.is_problematic_checkbox)))  # First row for is_problematic
+
+        secrets = st.secrets["connections"]["gsheets"]
+        sheet_manager = GoogleSheetsManager(secrets)
+        sheet = sheet_manager.get_sheet("anonymized_219")
+
+        # Batch update the Google Sheet
+        sheet_manager.update_multiple_cells(sheet, updates)
+
+        st.success("Patient data saved successfully!")
+
+    except Exception as e:
+        st.error(f"Error saving patient data: {e}")
