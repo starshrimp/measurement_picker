@@ -4,25 +4,22 @@ import pandas as pd
 from hill_equation import plot_hill_fit, train_hill_model
 from data_connector import load_all
 
+st.set_page_config(
+    page_title="All Patients",
+    page_icon="📈",
+    layout="wide",
+)
 st.title("All Patients with Hill Plots")
 
 # Load all data (including problematic and ideal flags)
-data, problematic_patients, ideal_patients, patient_ids = load_all()
+data, problematic_patients, ideal_patients, unprocessed_patients, patient_ids = load_all()
 
 # Organize plots in rows of 3 columns
 col_counter = 0
-columns = st.columns(3)
+columns = st.columns(5)
 
 # Loop over every patient in the dataset
 for patient_id, patient_data in data.groupby("Patient_ID"):
-
-    # Determine the border color based on flags
-    if patient_data["is_problematic"].any():
-        border_color = "red"
-    elif patient_data["is_ideal"].any():
-        border_color = "green"
-    else:
-        border_color = "transparent"  # No visible border
 
     # Collect selected measurements (x and y)
     x_selected = patient_data[patient_data["selected_measurement"] == 1]["Insp. O2 (%)"].values
@@ -51,21 +48,21 @@ for patient_id, patient_data in data.groupby("Patient_ID"):
 
             # Place the figure in one of the three columns with a colored border
             with columns[col_counter]:
-                st.markdown(
-                    f"""
-                    <div style="border:2px solid {border_color}; padding:10px;">
-                    """,
-                    unsafe_allow_html=True
-                )
-                st.write(f"Patient ID: {patient_id} - MSE: {mse:.4f}")
+                if patient_data["is_problematic"].any():
+                    st.write(f":red-background[Patient ID: {patient_id} - MSE: {mse:.4f}]")
+                elif patient_data["is_ideal"].any():
+                    st.write(f":green-background[Patient ID: {patient_id} - MSE: {mse:.4f}]")
+                else:
+                    st.write(f"[Patient ID: {patient_id} - MSE: {mse:.4f}]")
+                
                 st.pyplot(fig)
                 st.markdown("</div>", unsafe_allow_html=True)
 
             # Update column counter for a 3-column layout
             col_counter += 1
-            if col_counter == 3:
+            if col_counter == 5:
                 col_counter = 0
-                columns = st.columns(3)
+                columns = st.columns(5)
 
         except Exception as e:
             st.error(f"Error fitting Hill for Patient ID {patient_id}: {e}")

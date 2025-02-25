@@ -8,9 +8,10 @@ from data_connector import load_all
 st.set_page_config(
     page_title="Ideal Patients",
     page_icon="✅",
+    layout="wide",
 )
 
-data, problematic_patients, ideal_patients, patient_ids = load_all()
+data, problematic_patients, ideal_patients, unprocessed_patients, patient_ids = load_all()
 
 
 
