@@ -14,6 +14,7 @@ st.title("All Patients with Hill Plots")
 # Load all data (including problematic and ideal flags)
 data, problematic_patients, ideal_patients, unprocessed_patients, patient_ids = load_all()
 
+st.warning("The data points enumeration starts at 3 for each patient, so the datapoints are numbered consistentlly with the same number as in the Label page, where the first datapoint is 0/0 and the second is 9.7/50 for every patient.")
 # Organize plots in rows of 3 columns
 col_counter = 0
 columns = st.columns(5)
