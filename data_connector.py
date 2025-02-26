@@ -16,9 +16,6 @@ def load_all():
 
     patient_ids = st.session_state.patient_ids
 
-
-    
-
     if "problematic_patients" not in st.session_state:
         st.session_state.problematic_patients = load_problematic_patients(data)
     
@@ -65,8 +62,6 @@ def load_ideal_patients(data):
     # Filter all measurements for those patients
     ideal_patients = data[data["Patient_ID"].isin(ideal_patient_ids)]
     return ideal_patients
-
-
 
 def load_unprocessed_patients(data):
     # Identify first measurements for each patient

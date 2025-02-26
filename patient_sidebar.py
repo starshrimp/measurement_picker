@@ -1,5 +1,4 @@
 import streamlit as st
-from patient_controls import render_patient_controls
 from data_connector import load_all
 
 if "data" not in st.session_state:

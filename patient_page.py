@@ -2,9 +2,8 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 from visualisations import button_models
-from patient_controls import render_patient_controls
 from measurement_table import display_table_attributes
-from data_connector import load_all, save_data
+from data_connector import load_all
 from patient_sidebar import render_patient_sidebar
 from google_sheets import GoogleSheetsManager
 
@@ -16,9 +15,6 @@ def patient_page():
     else:
         data = st.session_state.data
         patient_ids = st.session_state.patient_ids
-    
-
-
 
     # Create two columns: left for navigation, right for main content
     col_nav, col_main = st.columns([1, 4])  # Adjust ratios as needed
@@ -29,8 +25,6 @@ def patient_page():
 
     # Main content area
     with col_main:
-
-
         st.title("Patient Overview")
 
         if "patient_id" in st.session_state:
@@ -39,7 +33,6 @@ def patient_page():
         else:
             patient_id = 1
             st.session_state["patient_id"] = patient_id
-            
 
         patient_data = data[data["Patient_ID"] == patient_id].reset_index(drop=True)
 
@@ -50,8 +43,7 @@ def patient_page():
             status_color = "green" if is_processed else "red"
             status_text = "Patient Processed" if is_processed else "Patient Not Processed"
             st.markdown(f"<div style='background-color:{status_color}; padding:10px; border-radius:5px; text-align:center; color:white;'>{status_text}</div>", unsafe_allow_html=True)
-
-
+            
         if not patient_data.empty:
             updated_table = display_table_attributes(patient_data, data, patient_id)
             

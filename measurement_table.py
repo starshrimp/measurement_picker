@@ -2,7 +2,6 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 from attribute_checkboxes import attribute_checkboxes
-from patient_sidebar import render_patient_sidebar
 from data_connector import save_data
 
 def measurement_table(patient_data):
