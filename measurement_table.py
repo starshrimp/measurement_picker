@@ -18,6 +18,9 @@ def measurement_table(patient_data):
     table_data = patient_data[["Measurement Nr", "Insp. O2 (%)", "SpO2 (%)"]].copy()
     table_data["Include in model"] = st.session_state.selected_measurements
 
+    for col in ["Measurement Nr"]:
+        table_data.loc[:1, col] = table_data.loc[:1, col].apply(lambda x: f"{x} 📚 ")
+
     updated_table = st.data_editor(
       table_data,
       column_config={"Include in model": st.column_config.CheckboxColumn()},

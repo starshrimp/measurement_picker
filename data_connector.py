@@ -123,11 +123,7 @@ def save_data(data, patient_id):
         patient_rows = data[data["Patient_ID"] == patient_id].index + 2  # Rows in the Google Sheet (1-based index, with header)
         patient_rows = patient_rows[2:]
 
-        st.table(patient_rows)
-
-        st.write(st.session_state.selected_measurements)
         relevant_measurements = st.session_state.selected_measurements[2:]
-        st.write(relevant_measurements)
         # Prepare updates for selected_measurement, is_ideal, and is_processed
         updates = []
         for i, row in enumerate(patient_rows):
@@ -156,10 +152,9 @@ def save_data(data, patient_id):
         st.session_state.data.loc[data["Patient_ID"] == patient_id, "is_processed"] = int(st.session_state.is_processed_toggle)
         st.session_state.data.loc[data["Patient_ID"] == patient_id, "is_problematic"] = int(st.session_state.is_problematic_checkbox)
 
-        st.success("Patient data saved successfully!")
-
-
+        
         st.rerun()
+        
     except Exception as e:
         st.error(f"Error saving patient data: {e}")
 
