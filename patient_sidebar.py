@@ -40,6 +40,7 @@ def render_patient_sidebar():
     else:
         data = st.session_state.data
         patient_ids = st.session_state.patient_ids
+
     st.markdown(
         """
         <style>
@@ -50,39 +51,30 @@ def render_patient_sidebar():
         """,
         unsafe_allow_html=True
     )
+
     st.markdown("### Patient Filters")
-  
     show_ideal = st.checkbox("Show Ideal", value=True)
     show_processed = st.checkbox("Show Processed", value=True)
     show_problematic = st.checkbox("Show Problematic", value=True)
     show_unprocessed = st.checkbox("Show Unprocessed", value=True)
 
-    st.session_state.patient_id = st.selectbox("Select Patient ID", options=patient_ids)
-    
-    #render_patient_controls(data)
-
-    # Add some CSS to make the patient list scrollable
-    st.markdown(
-        """
-        <style>
-        .scrollable-patient-list {
-            max-height: 400px; /* adjust as needed */
-            overflow-y: auto;
-            /*border: 1px solid #ccc;*/
-            padding: 0.5rem;
-            border-radius: 5px;
-            margin-top: 0.5rem;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
+    # Selectbox for patient selection
+    selected_patient_id = st.selectbox(
+        "Select Patient ID",
+        options=patient_ids,
+        index=list(patient_ids).index(st.session_state.get("patient_id", patient_ids[0]))
     )
 
+    
+    if selected_patient_id != st.session_state.get("patient_id"):
+        st.session_state["patient_id"] = selected_patient_id
+        st.rerun()  # Ensure UI updates when a different patient is selected
+
+    # Scrollable patient list
     st.markdown("#### Patient List")
     st.markdown("<div class='scrollable-patient-list'>", unsafe_allow_html=True)
 
     for pid in sorted(patient_ids):
-        # Filter logic based on sets
         if is_ideal(data, pid) and not show_ideal:
             continue
         if is_problematic(data, pid) and not show_problematic:
