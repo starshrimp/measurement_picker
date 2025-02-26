@@ -27,7 +27,15 @@ for patient_id, patient_data in data.groupby("Patient_ID"):
     # Collect deselected measurements for display
     deselected_data = patient_data[patient_data["selected_measurement"] == 0]
     deselected_data_index = np.array(deselected_data.index)
-    measurement_numbers_selected = np.array(patient_data[patient_data["selected_measurement"] == 1].index)
+
+    #Add a new column for per-patient numbering in original order
+    patient_data = patient_data.reset_index(drop=True)
+    patient_data["Measurement Nr"] = np.arange(1, len(patient_data) + 1)
+
+    # Extract measurement numbers for selected and deselected data
+    measurement_numbers_selected = patient_data.loc[patient_data["selected_measurement"] == 1, "Measurement Nr"].values
+    deselected_data_index = patient_data.loc[patient_data["selected_measurement"] == 0, "Measurement Nr"].values
+
 
     if len(x_selected) > 0 and len(y_selected) > 0:
         try:

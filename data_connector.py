@@ -66,6 +66,8 @@ def load_ideal_patients(data):
     ideal_patients = data[data["Patient_ID"].isin(ideal_patient_ids)]
     return ideal_patients
 
+
+
 def load_unprocessed_patients(data):
     # Identify first measurements for each patient
     first_measurements = (
@@ -134,6 +136,7 @@ def save_data(data, patient_id):
         updates.append((patient_rows[0], 7, int(st.session_state.ideal_curve_checkbox)))  # First row for is_ideal
         updates.append((patient_rows[0], 8, int(st.session_state.is_processed_toggle)))  # First row for is_processed
         updates.append((patient_rows[0], 9, int(st.session_state.is_problematic_checkbox)))  # First row for is_problematic
+        updates.append((patient_rows[0], 10, st.session_state.txt)) 
 
         secrets = st.secrets["connections"]["gsheets"]
         sheet_manager = GoogleSheetsManager(secrets)
@@ -146,14 +149,19 @@ def save_data(data, patient_id):
         data.loc[patient_rows[0], "is_ideal"] = int(st.session_state.ideal_curve_checkbox)
         data.loc[patient_rows[0], "is_processed"] = int(st.session_state.is_processed_toggle)
         data.loc[patient_rows[0], "is_problematic"] = int(st.session_state.is_problematic_checkbox)
+        data.loc[patient_rows[0], "comment"] = st.session_state.txt
 
         # Update session state immediately after saving to Google Sheets
         st.session_state.data.loc[data["Patient_ID"] == patient_id, "is_ideal"] = int(st.session_state.ideal_curve_checkbox)
         st.session_state.data.loc[data["Patient_ID"] == patient_id, "is_processed"] = int(st.session_state.is_processed_toggle)
         st.session_state.data.loc[data["Patient_ID"] == patient_id, "is_problematic"] = int(st.session_state.is_problematic_checkbox)
+        st.session_state.data.loc[data["Patient_ID"] == patient_id, "comment"] = st.session_state.txt
 
-        
+        st.toast("Patient data saved successfully!", icon='😍')
+        st.success("Patient data saved successfully!")
+        time.sleep(1.5)
         st.rerun()
+        
         
     except Exception as e:
         st.error(f"Error saving patient data: {e}")
