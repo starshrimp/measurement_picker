@@ -15,11 +15,11 @@ def is_problematic(data, pid):
     return bool(data[data["Patient_ID"] == pid]["is_problematic"].iloc[0])
 
 def is_unprocessed(data, pid):
-    return bool(data[data["Patient_ID"] == pid]["is_processed"].iloc[0])
+    return bool(data[data["Patient_ID"] == pid]["is_processed"].iloc[0]) == False
 
 def is_processed(data, pid):
     
-    return bool(data[data["Patient_ID"] == pid]["is_processed"].iloc[0])
+    return bool(data[data["Patient_ID"] == pid]["is_processed"].iloc[0]) == True
     
 
 def get_status_label(data, pid):
