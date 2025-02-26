@@ -11,12 +11,12 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("Oxygen Dissociation Curve (ODC) Fitting")
+
 
 def start_page():
 
     data, problematic_patients , ideal_patients, unprocessed_patients, patient_ids = load_all()
-    
+    st.title("Oxygen Dissociation Curve (ODC) Fitting")
     st.header("Search Patients")
 
     # Number input for direct navigation to patient page
