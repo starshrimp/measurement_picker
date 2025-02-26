@@ -1,7 +1,6 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-from data_connector import load_all
 
 
 st.set_page_config(
@@ -10,13 +9,8 @@ st.set_page_config(
     layout="wide",
 )
 
-
-
 def start_page():
-
-    data, problematic_patients , ideal_patients, unprocessed_patients, patient_ids = load_all()
     st.title("Oxygen Dissociation Curve (ODC) Fitting")
-    
     st.header("Help")
     st.markdown(
         """
