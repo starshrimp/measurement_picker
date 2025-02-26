@@ -146,8 +146,20 @@ def save_data(data, patient_id):
         # Batch update the Google Sheet
         sheet_manager.update_multiple_cells(sheet, updates)
 
+        data.loc[patient_rows, "selected_measurement"] = relevant_measurements
+        data.loc[patient_rows[0], "is_ideal"] = int(st.session_state.ideal_curve_checkbox)
+        data.loc[patient_rows[0], "is_processed"] = int(st.session_state.is_processed_toggle)
+        data.loc[patient_rows[0], "is_problematic"] = int(st.session_state.is_problematic_checkbox)
+
+        # Update session state immediately after saving to Google Sheets
+        st.session_state.data.loc[data["Patient_ID"] == patient_id, "is_ideal"] = int(st.session_state.ideal_curve_checkbox)
+        st.session_state.data.loc[data["Patient_ID"] == patient_id, "is_processed"] = int(st.session_state.is_processed_toggle)
+        st.session_state.data.loc[data["Patient_ID"] == patient_id, "is_problematic"] = int(st.session_state.is_problematic_checkbox)
+
         st.success("Patient data saved successfully!")
-        # st.rerun()
+
+
+        st.rerun()
     except Exception as e:
         st.error(f"Error saving patient data: {e}")
 

@@ -38,6 +38,7 @@ def display_table_attributes(patient_data, data, patient_id):
         attribute_checkboxes(patient_data, patient_id)
         if st.button("Save Updates"):
             st.session_state.selected_measurements = updated_table["Include in model"].tolist()
+            
             patient_data["selected_measurement"] = st.session_state.selected_measurements
             save_data(data, patient_id)
             

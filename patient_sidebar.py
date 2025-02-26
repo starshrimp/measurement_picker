@@ -92,5 +92,6 @@ def render_patient_sidebar():
         label = f"Patient {pid}: {get_status_label(data, pid)}"
         if st.button(label, key=f"select_{pid}"):
             st.session_state["patient_id"] = pid
+            st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)

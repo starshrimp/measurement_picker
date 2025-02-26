@@ -29,3 +29,5 @@ def attribute_checkboxes(patient_data, patient_id):
         label="Done processing this patient?",
         key="is_processed_toggle",
     )
+
+
