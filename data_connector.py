@@ -159,7 +159,7 @@ def save_data(data, patient_id):
 
         st.toast("Patient data saved successfully!", icon='😍')
         st.success("Patient data saved successfully!")
-        time.sleep(1.5)
+        time.sleep(2)
         st.rerun()
         
         
