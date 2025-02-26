@@ -40,16 +40,19 @@ def generate_hill_fit(x_data, y_data, popt):
     mse = np.mean((y_data - y_pred) ** 2)
     return x_range, y_fitted, mse
 
-# Function to create a plot with Hill fit and data points
+
+
+
 def plot_hill_fit(x_selected, y_selected, popt, deselected_data=None, measurement_numbers_selected=None):
     try:
-    
         x_range, y_fitted, mse = generate_hill_fit(x_selected, y_selected, popt)
     except Exception as e:
         st.error(f"Error generating Hill fit: {e}")
         return None, None
 
     fig, ax = plt.subplots()
+
+    selected_points = set(zip(x_selected, y_selected))
 
     # Plot selected data points with optional labels
     if measurement_numbers_selected is not None:
@@ -66,6 +69,13 @@ def plot_hill_fit(x_selected, y_selected, popt, deselected_data=None, measuremen
             deselected_data["SpO2 (%)"], 
             deselected_data["Measurement Nr"]
         )):
+            # Skip specific points (0,0) and (9.7,50) if they are deselected
+            if (x, y) == (0, 0):
+                continue
+            if (x, y) == (9.7, 50) and (0, 0) in selected_points:
+                pass  # Show as deselected
+            elif (x, y) in [(9.7, 50), (0, 0)]:
+                continue
             ax.scatter(x, y, color="grey", label="Deselected Data" if i == 0 else "", alpha=0.6)
             ax.text(x, y + 0.5, f"{label}", fontsize=10, ha="center", color="grey", fontweight="bold")
 

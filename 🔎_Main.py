@@ -7,14 +7,17 @@ from patient_page import patient_page
 #     page_icon="🔎",
 # )
 
+
 # Initialize Streamlit session state for navigation and patient ID
 if "page" not in st.session_state:
     st.session_state.page = "start"
+    st.balloons()
+    
 if "patient_id" not in st.session_state:
-    st.session_state.patient_id = None
+    st.session_state.patient_id = 1
 
-# Navigation handler
-if st.session_state.page == "start":
-    start_page()
-elif st.session_state.page == "patient":
-    patient_page()
+
+# if st.session_state.page == "start":
+# 
+start_page()
+

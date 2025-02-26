@@ -14,6 +14,7 @@ def button_models(patient_data, updated_table):
 
 def button_sigmoid_model(patient_data, updated_table):
     # Filter selected and deselected data
+    
     selected_data = patient_data[updated_table["Include in model"]]
     deselected_data = patient_data[~updated_table["Include in model"]]
 

@@ -16,7 +16,7 @@ data, problematic_patients, ideal_patients, unprocessed_patients, patient_ids = 
 
 
 # Display all "is_ideal" patients with hill plots
-st.subheader("Ideal Patients")
+st.title("Ideal Patients")
 
 if not ideal_patients.empty:
     # Counter for organizing plots in rows

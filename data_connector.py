@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
+import time
 from google_sheets import GoogleSheetsManager
+
 
 def load_all():
     if "data" not in st.session_state:
@@ -13,6 +15,9 @@ def load_all():
     data = data.dropna(subset=["Patient_ID"])
 
     patient_ids = st.session_state.patient_ids
+
+
+    
 
     if "problematic_patients" not in st.session_state:
         st.session_state.problematic_patients = load_problematic_patients(data)
@@ -38,6 +43,9 @@ def load_data():
     sheet = sheet_manager.get_sheet("anonymized_219")
     data = pd.DataFrame(sheet.get_all_records())
     patient_ids = data["Patient_ID"].unique()
+    
+    data = add_zero_and_p50(data)
+ 
     return data, patient_ids
 
 def load_problematic_patients(data):
@@ -76,10 +84,39 @@ def load_unprocessed_patients(data):
     return unprocessed_patients
 
 
+def add_zero_and_p50(data):
+    # Duplicate the first row for each patient twice and modify as requested
+    first_rows = data.sort_values(["Patient_ID", "Insp. O2 (%)"]).groupby("Patient_ID").head(1)
+    duplicated_first_rows = first_rows.copy()
+    duplicated_first_rows_1 = first_rows.copy()
+    
+    # Modify first duplicate
+    duplicated_first_rows["Insp. O2 (%)"] = 0
+    duplicated_first_rows["SpO2 (%)"] = 0
+    duplicated_first_rows["selected_measurement"] = 0
+    
+    # Modify second duplicate
+    duplicated_first_rows_1["Insp. O2 (%)"] = 9.7
+    duplicated_first_rows_1["SpO2 (%)"] = 50
+    duplicated_first_rows_1["selected_measurement"] = 0
+    
+    # Concatenate modified rows back with the original data
+    data = pd.concat([duplicated_first_rows, duplicated_first_rows_1, data], ignore_index=True)
+    return data
+
+
 def save_data(data, patient_id):
     try:
         # Filter data for the current patient
         patient_rows = data[data["Patient_ID"] == patient_id].index + 2  # Rows in the Google Sheet (1-based index, with header)
+
+        # Ignore the first two rows
+        patient_rows = patient_rows[2:]
+        st.table(patient_rows)
+        
+        # Ignore the first two selected measurements
+        relevant_measurements = st.session_state.selected_measurements[2:]
+        st.write(relevant_measurements)
 
         # Prepare updates for selected_measurement, is_ideal, and is_processed
         updates = []
@@ -89,7 +126,7 @@ def save_data(data, patient_id):
 
         # Update "is_ideal" and "is_processed" (only for the first row of this patient in Google Sheets)
         updates.append((patient_rows[0], 7, int(st.session_state.ideal_curve_checkbox)))  # First row for is_ideal
-        updates.append((patient_rows[0], 8, int(st.session_state.is_processed_checkbox)))  # First row for is_processed
+        updates.append((patient_rows[0], 8, int(st.session_state.is_processed_toggle)))  # First row for is_processed
         updates.append((patient_rows[0], 9, int(st.session_state.is_problematic_checkbox)))  # First row for is_problematic
 
         secrets = st.secrets["connections"]["gsheets"]
@@ -103,3 +140,4 @@ def save_data(data, patient_id):
 
     except Exception as e:
         st.error(f"Error saving patient data: {e}")
+

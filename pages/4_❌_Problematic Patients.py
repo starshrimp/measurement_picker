@@ -11,7 +11,7 @@ st.set_page_config(
 )
 
 # Display all "is_problematic" patients with hill plots
-st.subheader("Problematic Patients")
+st.title("Problematic Patients")
 data, problematic_patients, ideal_patients, unprocessed_patients, patient_ids = load_all()
 
 if not problematic_patients.empty:

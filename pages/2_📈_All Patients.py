@@ -20,15 +20,14 @@ columns = st.columns(5)
 
 # Loop over every patient in the dataset
 for patient_id, patient_data in data.groupby("Patient_ID"):
-
     # Collect selected measurements (x and y)
-    x_selected = patient_data[patient_data["selected_measurement"] == 1]["Insp. O2 (%)"].values
-    y_selected = patient_data[patient_data["selected_measurement"] == 1]["SpO2 (%)"].values
+    x_selected = np.array(patient_data[patient_data["selected_measurement"] == 1]["Insp. O2 (%)"])
+    y_selected = np.array(patient_data[patient_data["selected_measurement"] == 1]["SpO2 (%)"])
 
     # Collect deselected measurements for display
     deselected_data = patient_data[patient_data["selected_measurement"] == 0]
-    deselected_data_index = deselected_data.index.values
-    measurement_numbers_selected = patient_data[patient_data["selected_measurement"] == 1].index.values
+    deselected_data_index = np.array(deselected_data.index)
+    measurement_numbers_selected = np.array(patient_data[patient_data["selected_measurement"] == 1].index)
 
     if len(x_selected) > 0 and len(y_selected) > 0:
         try:
