@@ -21,7 +21,7 @@ def patient_page():
 
 
     # Create two columns: left for navigation, right for main content
-    col_nav, col_main = st.columns([1.5, 4])  # Adjust ratios as needed
+    col_nav, col_main = st.columns([1, 4])  # Adjust ratios as needed
 
     with col_nav:
         #render_patient_sidebar(data, patient_ids)
