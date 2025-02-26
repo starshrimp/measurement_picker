@@ -31,7 +31,14 @@ if not ideal_patients.empty:
         deselected_data = patient_data[patient_data["selected_measurement"] == 0]
 
         # Use the index of the selected measurements as labels
-        measurement_numbers_selected = patient_data[patient_data["selected_measurement"] == 1].index.values
+        # Reset index per patient and add sequential numbering
+        patient_data = patient_data.reset_index(drop=True)
+        patient_data["Measurement Nr"] = np.arange(1, len(patient_data) + 1)
+
+        # Extract measurement numbers while maintaining order
+        measurement_numbers_selected = patient_data.loc[patient_data["selected_measurement"] == 1, "Measurement Nr"].values
+        deselected_data_index = patient_data.loc[patient_data["selected_measurement"] == 0, "Measurement Nr"].values
+
 
         # Train the hill model
         if len(x_selected) > 0 and len(y_selected) > 0:
