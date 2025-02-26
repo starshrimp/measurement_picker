@@ -85,23 +85,35 @@ def load_unprocessed_patients(data):
 
 
 def add_zero_and_p50(data):
-    # Duplicate the first row for each patient twice and modify as requested
-    first_rows = data.sort_values(["Patient_ID", "Insp. O2 (%)"]).groupby("Patient_ID").head(1)
-    duplicated_first_rows = first_rows.copy()
-    duplicated_first_rows_1 = first_rows.copy()
-    
-    # Modify first duplicate
-    duplicated_first_rows["Insp. O2 (%)"] = 0
-    duplicated_first_rows["SpO2 (%)"] = 0
-    duplicated_first_rows["selected_measurement"] = 0
-    
-    # Modify second duplicate
-    duplicated_first_rows_1["Insp. O2 (%)"] = 9.7
-    duplicated_first_rows_1["SpO2 (%)"] = 50
-    duplicated_first_rows_1["selected_measurement"] = 0
-    
+    # Store original indices
+    original_indices = data.index
+
+    # Identify first measurement for each patient
+    first_rows = data.sort_values(["Patient_ID", "Insp. O2 (%)"]).groupby("Patient_ID").head(1).copy()
+
+    # Create duplicates without modifying original data indices
+    duplicated_first_rows_0 = first_rows.copy()
+    duplicated_first_rows_p50 = first_rows.copy()
+
+    # Modify first duplicate for 0/0
+    duplicated_first_rows_0["Insp. O2 (%)"] = 0
+    duplicated_first_rows_0["SpO2 (%)"] = 0
+    duplicated_first_rows_0["selected_measurement"] = 0
+    duplicated_first_rows_0.index = range(len(data), len(data) + len(duplicated_first_rows_0))
+
+    # Modify second duplicate for P50
+    duplicated_first_rows_p50["Insp. O2 (%)"] = 9.7
+    duplicated_first_rows_p50["SpO2 (%)"] = 50
+    duplicated_first_rows_p50["selected_measurement"] = 0
+    duplicated_first_rows_p50.index = range(len(data) + len(duplicated_first_rows_0), 
+                                            len(data) + len(duplicated_first_rows_0) + len(duplicated_first_rows_p50))
+
     # Concatenate modified rows back with the original data
-    data = pd.concat([duplicated_first_rows, duplicated_first_rows_1, data], ignore_index=True)
+    data = pd.concat([data, duplicated_first_rows_0, duplicated_first_rows_p50], ignore_index=False)
+
+    # Sort to make sure the added rows appear first for each patient
+    data = data.sort_values(["Patient_ID", "Insp. O2 (%)"], ascending=[True, True])
+
     return data
 
 
@@ -109,20 +121,18 @@ def save_data(data, patient_id):
     try:
         # Filter data for the current patient
         patient_rows = data[data["Patient_ID"] == patient_id].index + 2  # Rows in the Google Sheet (1-based index, with header)
-
-        # Ignore the first two rows
         patient_rows = patient_rows[2:]
+
         st.table(patient_rows)
-        
-        # Ignore the first two selected measurements
+
+        st.write(st.session_state.selected_measurements)
         relevant_measurements = st.session_state.selected_measurements[2:]
         st.write(relevant_measurements)
-
         # Prepare updates for selected_measurement, is_ideal, and is_processed
         updates = []
         for i, row in enumerate(patient_rows):
             # Update "selected_measurement" for each measurement of the patient
-            updates.append((row, 5, int(st.session_state.selected_measurements[i])))
+            updates.append((row, 5, int(relevant_measurements[i])))
 
         # Update "is_ideal" and "is_processed" (only for the first row of this patient in Google Sheets)
         updates.append((patient_rows[0], 7, int(st.session_state.ideal_curve_checkbox)))  # First row for is_ideal
@@ -137,7 +147,7 @@ def save_data(data, patient_id):
         sheet_manager.update_multiple_cells(sheet, updates)
 
         st.success("Patient data saved successfully!")
-
+        # st.rerun()
     except Exception as e:
         st.error(f"Error saving patient data: {e}")
 

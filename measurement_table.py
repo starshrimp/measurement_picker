@@ -37,6 +37,8 @@ def display_table_attributes(patient_data, data, patient_id):
         st.markdown("<div style='padding-top: 100px;'>", unsafe_allow_html=True)
         attribute_checkboxes(patient_data, patient_id)
         if st.button("Save Updates"):
+            st.session_state.selected_measurements = updated_table["Include in model"].tolist()
+            patient_data["selected_measurement"] = st.session_state.selected_measurements
             save_data(data, patient_id)
             
         st.text("This button will save the changes from the table on the left as well as the selections from the checkboxes on top to the database.")
