@@ -51,12 +51,15 @@ def render_patient_sidebar():
         unsafe_allow_html=True
     )
     st.markdown("### Patient Filters")
+  
     show_ideal = st.checkbox("Show Ideal", value=True)
     show_processed = st.checkbox("Show Processed", value=True)
     show_problematic = st.checkbox("Show Problematic", value=True)
     show_unprocessed = st.checkbox("Show Unprocessed", value=True)
 
-    render_patient_controls(data)
+    st.session_state.patient_id = st.selectbox("Select Patient ID", options=patient_ids)
+    
+    #render_patient_controls(data)
 
     # Add some CSS to make the patient list scrollable
     st.markdown(
